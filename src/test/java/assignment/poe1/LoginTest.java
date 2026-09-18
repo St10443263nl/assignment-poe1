@@ -1,5 +1,5 @@
 package assignment.poe1;
-
+//Unit test for usernam,password and cellphone number and login validation
 import org.junit.Test;
 import static org.junit.Assert.assertEquals;
 
