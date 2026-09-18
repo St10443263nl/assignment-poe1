@@ -1,5 +1,5 @@
 package assignment.poe1;
-
+//Handles user registration and login
 import java.util.regex.Pattern;
 
 public class Login {
