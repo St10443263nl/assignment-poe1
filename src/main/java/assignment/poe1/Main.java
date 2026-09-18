@@ -1,5 +1,6 @@
 package assignment.poe1;
 //Main application for HuddleApp registration and login
+//Uses scanner to collect user registration and login details
 
 import java.util.Scanner;
 
