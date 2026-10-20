@@ -58,13 +58,15 @@ public class Message {
         this.stored = false;
     }
 
-    private static String generateID() {
-        return String.format(
-                Locale.ROOT,
-                "%010d",
-                RANDOM.nextInt(1_000_000_000)
-        );
-    }
+   private static String generateID() {
+    int randomNumber = RANDOM.nextInt(1_000_000_000);
+
+    return String.format(
+            Locale.ROOT,
+            "%010d",
+            randomNumber
+    );
+}
 
     public boolean checkMessageID() {
         return messageID.matches("\\d{1,10}");
