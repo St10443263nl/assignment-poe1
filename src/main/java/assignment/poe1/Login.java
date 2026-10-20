@@ -2,6 +2,7 @@ package assignment.poe1;
 //Handles user registration and login
 import java.util.regex.Pattern;
 
+// This class handles user login and validates login details.
 public class Login {
     
 private String username;
