@@ -12,6 +12,7 @@ import java.util.List;
 import java.util.Locale;
 import java.util.regex.Pattern;
 
+// This class handles creating, validating, and storing messages.
 public class Message {
 
     private static final SecureRandom RANDOM = new SecureRandom();
