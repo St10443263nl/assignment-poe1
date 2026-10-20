@@ -17,6 +17,7 @@ public class Message {
 
     private static final SecureRandom RANDOM = new SecureRandom();
     private static final List<Message> SENT_MESSAGES = new ArrayList<>();
+    // This path identifies the file used to store messages in JSON format.
     private static final Path JSON_FILE = Path.of("messages.json");
 
     private static final String RECIPIENT_SUCCESS =
