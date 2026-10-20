@@ -4,7 +4,8 @@ package assignment.poe1;
 import java.util.Scanner;
 
 public class Main {
-
+   
+// Main method starts the QuickChat application
     public static void main(String[] args) {
 
         Scanner scanner = new Scanner(System.in);
