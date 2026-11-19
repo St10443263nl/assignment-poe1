@@ -11,6 +11,8 @@ import java.nio.file.Path;
 
 import static org.junit.Assert.*;
 
+// JUnit tests verify the Part 3 messaging features,
+// including message arrays, searching, deletion, and reports.
 public class MessageTest {
 
     private static final Path JSON_FILE = Path.of("messages.json");
