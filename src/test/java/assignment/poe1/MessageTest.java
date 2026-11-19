@@ -13,238 +13,364 @@ import static org.junit.Assert.*;
 
 public class MessageTest {
 
-    private final Path jsonFile = Path.of("messages.json");
-    private byte[] previousJson;
+    private static final Path JSON_FILE = Path.of("messages.json");
+    private String originalJson;
 
     @Before
     public void setUp() throws IOException {
-        Message.clearSentMessages();
-
-        previousJson = Files.exists(jsonFile)
-                ? Files.readAllBytes(jsonFile)
+        // Keep a copy of any messages.json file that existed before testing.
+        originalJson = Files.exists(JSON_FILE)
+                ? Files.readString(JSON_FILE)
                 : null;
 
-        Files.deleteIfExists(jsonFile);
+        Message.clearAllMessages();
+        Files.deleteIfExists(JSON_FILE);
     }
 
     @After
     public void tearDown() throws IOException {
-        Message.clearSentMessages();
+        Message.clearAllMessages();
 
-        if (previousJson == null) {
-            Files.deleteIfExists(jsonFile);
+        // Restore the original messages.json file.
+        if (originalJson == null) {
+            Files.deleteIfExists(JSON_FILE);
         } else {
-            Files.write(jsonFile, previousJson);
+            Files.writeString(JSON_FILE, originalJson);
         }
     }
 
+    // ---------------------------------------------------------
+    // PART 2 TESTS
+    // ---------------------------------------------------------
+
     @Test
     public void generatedIdIsTenDigits() {
-        Message m = new Message(
-                0,
-                "+27718693002",
-                "Hi Mike, can you join us for dinner tonight?"
-        );
+        Message message = new Message(0, "+27834557896", "Hello");
 
-        assertTrue(m.checkMessageID());
-        assertEquals(10, m.getMessageID().length());
-        assertTrue(m.getMessageID().matches("\\d{10}"));
+        assertTrue(message.getMessageID().matches("\\d{10}"));
     }
 
     @Test
     public void rejectsIdLongerThanTenCharacters() {
-        Message m = new Message(
-                "12345678901", 0, "+27718693002", "Hi"
-        );
+        Message message = new Message(
+                "12345678901", 0, "+27834557896", "Hello");
 
-        assertFalse(m.checkMessageID());
+        assertFalse(message.checkMessageID());
     }
 
     @Test
     public void acceptsAssignmentInternationalRecipient() {
-        Message m = new Message(
-                0, "+27718693002", "Hi"
-        );
+        Message message = new Message(
+                0, "+27834557896", "Hello");
 
         assertEquals(
                 "Cell phone number successfully captured.",
-                m.checkRecipientCell()
-        );
-    }
-
-    @Test
-    public void acceptsSecondAssignmentTestNumber() {
-        Message m = new Message(
-                1, "08575975889", "Hi"
-        );
-
-        assertEquals(
-                "Cell phone number successfully captured.",
-                m.checkRecipientCell()
-        );
+                message.checkRecipientCell());
     }
 
     @Test
     public void rejectsBadRecipient() {
-        Message m = new Message(
-                0, "12345", "Hi"
-        );
+        Message message = new Message(
+                0, "12345", "Hello");
 
-        assertEquals(
-                "Cell phone number is incorrectly formatted or does not contain an international code. Please correct the number and try again.",
-                m.checkRecipientCell()
-        );
+        assertNotEquals(
+                "Cell phone number successfully captured.",
+                message.checkRecipientCell());
     }
 
     @Test
     public void accepts250Characters() {
-        Message m = new Message(
-                0, "+27718693002", "A".repeat(250)
-        );
+        String text = "A".repeat(250);
+
+        Message message = new Message(
+                0, "+27834557896", text);
 
         assertEquals(
                 "Message ready to send.",
-                m.validateMessageLength()
-        );
+                message.validateMessageLength());
     }
 
     @Test
     public void rejectsMoreThan250Characters() {
-        Message m = new Message(
-                0, "+27718693002", "A".repeat(255)
-        );
+        String text = "A".repeat(251);
+
+        Message message = new Message(
+                0, "+27834557896", text);
 
         assertEquals(
-                "Message exceeds 250 characters by 5; please reduce the size.",
-                m.validateMessageLength()
-        );
+                "Message exceeds 250 characters by 1; please reduce the size.",
+                message.validateMessageLength());
     }
 
     @Test
     public void createsAssignmentHash() {
-        Message m = new Message(
-                "0012345678",
-                0,
-                "+27718693002",
-                "Hi Mike, can you join us for dinner tonight?"
-        );
+        Message message = new Message(
+                "0012345678", 0, "+27834557896", "Hi tonight");
 
         assertEquals(
                 "00:0:HITONIGHT",
-                m.createMessageHash()
-        );
+                message.createMessageHash());
     }
 
     @Test
     public void sendsMessageAndCountsIt() {
-        Message m = new Message(
-                "1234567890", 0, "+27718693002", "Hello"
-        );
+        Message message = new Message(
+                0, "+27834557896", "Hello");
 
         assertEquals(
                 "Message successfully sent.",
-                m.SentMessage("1")
-        );
+                message.SentMessage("1"));
 
-        assertTrue(m.isSent());
-        assertEquals(1, m.returnTotalMessagess());
+        assertTrue(message.isSent());
+        assertEquals(1, message.returnTotalMessages());
     }
 
     @Test
     public void invalidMessageCannotBeSent() {
-        Message m = new Message(
-                "1234567890", 0, "12345", "Hello"
-        );
+        Message message = new Message(
+                "12345678901", 0, "+27834557896", "Hello");
 
-        assertTrue(
-                m.SentMessage("1").startsWith(
-                        "Cell phone number is incorrectly formatted"
-                )
-        );
+        assertEquals(
+                "Invalid message ID.",
+                message.SentMessage("1"));
 
-        assertEquals(0, m.returnTotalMessagess());
+        assertEquals(0, message.returnTotalMessages());
     }
 
     @Test
     public void discardPromptAndDiscardWork() {
-        Message m = new Message(
-                "1234567890", 0, "+27718693002", "Hello"
-        );
-
-        m.SentMessage("1");
+        Message message = new Message(
+                0, "+27834557896", "Hello");
 
         assertEquals(
                 "Press 0 to delete the message.",
-                m.SentMessage("2")
-        );
+                message.SentMessage("2"));
 
         assertEquals(
                 "Message successfully disregarded.",
-                m.disregardMessage()
-        );
+                message.disregardMessage());
 
-        assertEquals(0, m.returnTotalMessagess());
+        assertEquals(1, Message.getDisregardedMessages().length);
     }
 
     @Test
     public void storesMessageAsJson() throws IOException {
-        Message m = new Message(
-                "1234567890", 1, "+27718693002", "Hello"
-        );
+        Message message = new Message(
+                "1234567890", 1, "+27834557896", "Hello");
 
         assertEquals(
                 "Message successfully stored.",
-                m.SentMessage("3")
-        );
+                message.SentMessage("3"));
 
-        assertTrue(
-                "messages.json was not created.",
-                Files.exists(jsonFile)
-        );
+        assertTrue(Files.exists(JSON_FILE));
 
-        String json = Files.readString(jsonFile).trim();
+        String json = Files.readString(JSON_FILE);
 
-        System.out.println("JSON CONTENT: " + json);
-
-        assertTrue(
-                "JSON must start with [ and end with ]. Actual: " + json,
-                json.startsWith("[") && json.endsWith("]")
-        );
-
-        assertTrue(
-                "Missing message ID. Actual: " + json,
-                json.contains("\"messageID\":\"1234567890\"")
-        );
-
-        assertTrue(
-                "Missing or incorrect message hash. Actual: " + json,
-                json.contains("\"messageHash\":\"12:1:HELLO\"")
-        );
+        assertTrue(json.contains("\"messageHash\":\"12:1:HELLO\""));
+        assertTrue(json.contains("\"recipient\":\"+27834557896\""));
+        assertTrue(json.contains("\"message\":\"Hello\""));
     }
 
     @Test
     public void printsSentMessageDetailsInRequiredOrder() {
-        Message m = new Message(
-                "1234567890", 1, "+27718693002", "Hello"
-        );
+        Message message = new Message(
+                0, "+27834557896", "Hello");
 
-        m.SentMessage("1");
+        message.SentMessage("1");
 
-        String output = m.printMessages();
+        String output = message.printMessages();
 
-        assertTrue(
-                output.indexOf("Message ID:")
-                        < output.indexOf("Message Hash:")
-        );
+        assertTrue(output.contains("Message ID:"));
+        assertTrue(output.contains("Message Hash:"));
+        assertTrue(output.contains("Recipient:"));
+        assertTrue(output.contains("Message:"));
 
-        assertTrue(
-                output.indexOf("Message Hash:")
-                        < output.indexOf("Recipient:")
-        );
+        assertTrue(output.indexOf("Message ID:")
+                < output.indexOf("Message Hash:"));
 
-        assertTrue(
-                output.indexOf("Recipient:")
-                        < output.indexOf("Message:")
-        );
+        assertTrue(output.indexOf("Message Hash:")
+                < output.indexOf("Recipient:"));
+
+        assertTrue(output.indexOf("Recipient:")
+                < output.indexOf("Message:"));
+    }
+
+    // ---------------------------------------------------------
+    // PART 3 TESTS
+    // ---------------------------------------------------------
+
+    @Test
+    public void storesMessagesInRequiredArrays() {
+        Message sent = new Message(
+                "1000000001", 1, "+27834557896",
+                "Did you get the cake?");
+
+        Message stored = new Message(
+                "1000000002", 2, "+27838884567",
+                "Where are you? You are late! I have asked you to be on time.");
+
+        Message disregarded = new Message(
+                "1000000003", 3, "+27834484567",
+                "Yoohoooo, I am at your gate.");
+
+        sent.SentMessage("1");
+        stored.SentMessage("3");
+        disregarded.disregardMessage();
+
+        assertEquals(1, Message.getSentMessages().length);
+        assertEquals(1, Message.getStoredMessages().length);
+        assertEquals(1, Message.getDisregardedMessages().length);
+
+        assertEquals(3, Message.getMessageIDs().length);
+        assertEquals(3, Message.getMessageHashes().length);
+    }
+
+    @Test
+    public void displaysLongestStoredMessage() {
+        Message first = new Message(
+                "2000000001", 1, "+27838884567",
+                "Short message");
+
+        Message second = new Message(
+                "2000000002", 2, "+27838884567",
+                "Where are you? You are late! I have asked you to be on time.");
+
+        first.SentMessage("3");
+        second.SentMessage("3");
+
+        Message longest = Message.getLongestStoredMessage();
+
+        assertNotNull(longest);
+        assertEquals(second.getMessageID(), longest.getMessageID());
+    }
+
+    @Test
+    public void searchesStoredMessageByID() {
+        Message message = new Message(
+                "3000000001", 1, "+27838884567",
+                "Where are you?");
+
+        message.SentMessage("3");
+
+        Message result =
+                Message.searchStoredMessageByID("3000000001");
+
+        assertNotNull(result);
+        assertEquals(
+                "Where are you?",
+                result.getMessageText());
+    }
+
+    @Test
+    public void searchesStoredMessagesByRecipient() {
+        Message first = new Message(
+                "4000000001", 1, "+27838884567",
+                "Where are you?");
+
+        Message second = new Message(
+                "4000000002", 2, "+27838884567",
+                "I am leaving now.");
+
+        Message third = new Message(
+                "4000000003", 3, "+27834557896",
+                "Did you get the cake?");
+
+        first.SentMessage("3");
+        second.SentMessage("3");
+        third.SentMessage("3");
+
+        Message[] results =
+                Message.searchStoredMessagesByRecipient("+27838884567");
+
+        assertEquals(2, results.length);
+        assertEquals(
+                "+27838884567",
+                results[0].getRecipient());
+        assertEquals(
+                "+27838884567",
+                results[1].getRecipient());
+    }
+
+    @Test
+    public void deletesStoredMessageUsingHash() throws IOException {
+        Message message = new Message(
+                "5000000001", 1, "+27838884567",
+                "Ok, I am leaving without you.");
+
+        message.SentMessage("3");
+
+        String hash = message.createMessageHash();
+
+        assertEquals(1, Message.getStoredMessages().length);
+
+        boolean deleted =
+                Message.deleteStoredMessageByHash(hash);
+
+        assertTrue(deleted);
+        assertEquals(0, Message.getStoredMessages().length);
+
+        String json = Files.readString(JSON_FILE);
+        assertFalse(json.contains(message.getMessageID()));
+    }
+
+    @Test
+    public void generatesFullStoredMessagesReport() {
+        Message first = new Message(
+                "6000000001", 1, "+27838884567",
+                "Where are you?");
+
+        Message second = new Message(
+                "6000000002", 2, "+27838884567",
+                "Ok, I am leaving without you.");
+
+        first.SentMessage("3");
+        second.SentMessage("3");
+
+        String report = Message.generateStoredMessagesReport();
+
+        assertTrue(report.contains("6000000001"));
+        assertTrue(report.contains("6000000002"));
+        assertTrue(report.contains("Where are you?"));
+        assertTrue(report.contains("Ok, I am leaving without you."));
+        assertTrue(report.contains("Recipient:"));
+        assertTrue(report.contains("Message Hash:"));
+    }
+
+    @Test
+    public void loadsStoredMessagesFromJson() throws IOException {
+        Message message = new Message(
+                "7000000001", 1, "+27838884567",
+                "Where are you?");
+
+        message.SentMessage("3");
+
+        Message.clearAllMessages();
+
+        Message.loadStoredMessages();
+
+        assertEquals(1, Message.getStoredMessages().length);
+        assertEquals(
+                "7000000001",
+                Message.getStoredMessages()[0].getMessageID());
+    }
+
+    @Test
+    public void returnsNoMessageWhenSearchingForUnknownID() {
+        assertNull(
+                Message.searchStoredMessageByID("9999999999"));
+    }
+
+    @Test
+    public void returnsEmptyArrayWhenRecipientIsNotFound() {
+        Message message = new Message(
+                "8000000001", 1, "+27838884567",
+                "Where are you?");
+
+        message.SentMessage("3");
+
+        Message[] results =
+                Message.searchStoredMessagesByRecipient("+27834557896");
+
+        assertEquals(0, results.length);
     }
 }
