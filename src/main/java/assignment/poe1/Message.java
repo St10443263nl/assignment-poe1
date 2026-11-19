@@ -250,7 +250,8 @@ public class Message {
         return returnTotalMessagess();
     }
 
-    // Store or update this message in the JSON file.
+   // Saves the current message to the JSON file
+// so that it can be retrieved later.
     public void storeMessage() throws IOException {
         List<Message> messages = readMessagesFromJson();
         messages.removeIf(message -> message.messageID.equals(messageID));
@@ -258,7 +259,8 @@ public class Message {
         writeMessagesToJson(messages);
     }
 
-    // Load previously stored JSON messages into the Part 3 stored array.
+   // Loads previously stored messages from the JSON file
+// into the stored messages array when required.
     public static void loadStoredMessages() throws IOException {
         storedMessages = new Message[0];
         List<Message> messages = readMessagesFromJson();
